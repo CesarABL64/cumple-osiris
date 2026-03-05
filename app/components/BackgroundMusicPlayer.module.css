@@ -1,0 +1,93 @@
+.musicPlayerShell {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 60;
+  width: min(90vw, 290px);
+}
+
+.musicPlayerToggle {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+  color: #f8faff;
+  font-weight: 700;
+  background: linear-gradient(130deg, rgba(31, 36, 70, 0.95), rgba(20, 20, 32, 0.92));
+  box-shadow: 0 10px 28px rgba(5, 6, 12, 0.45);
+  cursor: pointer;
+}
+
+.musicPlayerPanel {
+  margin-top: 0.55rem;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(180deg, rgba(29, 31, 50, 0.95), rgba(16, 16, 26, 0.94));
+  transition: max-height 320ms ease, opacity 260ms ease;
+}
+
+.open {
+  max-height: 360px;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.musicPlayerRow {
+  padding: 0.8rem 0.8rem 0.1rem;
+}
+
+.musicMainButton {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  padding: 0.5rem 0.7rem;
+  color: #ffffff;
+  background: linear-gradient(90deg, #ff8f5f, #f34d9e);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.musicTrackList {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.6rem 0.8rem;
+}
+
+.musicTrackItem {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 10px;
+  padding: 0.45rem 0.65rem;
+  color: #f5f7ff;
+  background: rgba(255, 255, 255, 0.06);
+  text-align: left;
+  cursor: pointer;
+}
+
+.active {
+  border-color: rgba(255, 186, 92, 0.75);
+  background: rgba(255, 186, 92, 0.22);
+}
+
+.musicVolumeLabel {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.2rem 0.8rem 0.4rem;
+  color: #d8def8;
+  font-size: 0.86rem;
+}
+
+.musicVolumeLabel input {
+  width: 100%;
+}
+
+.musicStatus {
+  margin: 0;
+  padding: 0.25rem 0.8rem 0.8rem;
+  color: #aab2da;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
