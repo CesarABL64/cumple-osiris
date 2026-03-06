@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import styles from "./BackgroundMusicPlayer.module.css";
 
 type Track = {
@@ -10,9 +10,9 @@ type Track = {
 };
 
 const tracks: Track[] = [
-  { id: "song-1", label: "Canción 1", src: "/music/cancion-1.mp3" },
-  { id: "song-2", label: "Canción 2", src: "/music/cancion-2.mp3" },
-  { id: "song-3", label: "Canción 3", src: "/music/cancion-3.mp3" },
+  { id: "song-1", label: "Cepillín - Las mañanitas", src: "/music/cepillin.mp3" },
+  { id: "song-2", label: "Bring me the Horizon - I don't know what to say", src: "/music/bmth.mp3" },
+  { id: "song-3", label: "Babymetal - Song 3", src: "/music/song3.mp3" },
 ];
 
 export default function BackgroundMusicPlayer() {
@@ -21,9 +21,24 @@ export default function BackgroundMusicPlayer() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrackId, setCurrentTrackId] = useState(tracks[0].id);
   const [volume, setVolume] = useState(0.35);
-  const [status, setStatus] = useState("Listo para reproducir");
+  const [statusNote, setStatusNote] = useState("");
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const currentTrack = tracks.find((track) => track.id === currentTrackId) ?? tracks[0];
+  const displayedStatus =
+    statusNote || (isPlaying ? `Reproduciendo: ${currentTrack.label}` : `Seleccionada: ${currentTrack.label}`);
+
+  const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) {
+      return "0:00";
+    }
+
+    const wholeSeconds = Math.floor(seconds);
+    const minutes = Math.floor(wholeSeconds / 60);
+    const remainingSeconds = wholeSeconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -38,21 +53,7 @@ export default function BackgroundMusicPlayer() {
 
     audio.src = currentTrack.src;
     audio.load();
-
-    if (isPlaying) {
-      void audio
-        .play()
-        .then(() => {
-          setStatus(`Reproduciendo: ${currentTrack.label}`);
-        })
-        .catch(() => {
-          setIsPlaying(false);
-          setStatus("No se pudo reproducir. Agrega el archivo de audio.");
-        });
-    } else {
-      setStatus(`Seleccionada: ${currentTrack.label}`);
-    }
-  }, [currentTrack, isPlaying]);
+  }, [currentTrack]);
 
   const togglePlayback = async () => {
     const audio = audioRef.current;
@@ -61,17 +62,73 @@ export default function BackgroundMusicPlayer() {
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
-      setStatus("Pausado");
+      setStatusNote("Pausado");
       return;
     }
 
     try {
       await audio.play();
       setIsPlaying(true);
-      setStatus(`Reproduciendo: ${currentTrack.label}`);
+      setStatusNote("");
     } catch {
       setIsPlaying(false);
-      setStatus("No se pudo reproducir. Agrega el archivo de audio.");
+      setStatusNote("No se pudo reproducir. Agrega el archivo de audio.");
+    }
+  };
+
+  const handleSeek = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextTime = Number(event.target.value);
+    const audio = audioRef.current;
+
+    setCurrentTime(nextTime);
+
+    if (!audio) {
+      return;
+    }
+
+    audio.currentTime = nextTime;
+  };
+
+  const handleLoadedMetadata = () => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    setDuration(Number.isFinite(audio.duration) ? audio.duration : 0);
+  };
+
+  const handleTimeUpdate = () => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    setCurrentTime(audio.currentTime);
+  };
+
+  const handleTrackSelect = async (track: Track) => {
+    const audio = audioRef.current;
+    if (!audio) {
+      return;
+    }
+
+    setStatusNote("");
+
+    if (track.id !== currentTrackId) {
+      setCurrentTrackId(track.id);
+      setCurrentTime(0);
+      setDuration(0);
+      audio.src = track.src;
+      audio.load();
+    }
+
+    try {
+      await audio.play();
+      setIsPlaying(true);
+    } catch {
+      setIsPlaying(false);
+      setStatusNote("No se pudo reproducir. Agrega el archivo de audio.");
     }
   };
 
@@ -81,7 +138,10 @@ export default function BackgroundMusicPlayer() {
         ref={audioRef}
         preload="auto"
         loop
-        onError={() => setStatus("Archivo no encontrado. Agrega la canción en public/music.")}
+        onLoadedMetadata={handleLoadedMetadata}
+        onDurationChange={handleLoadedMetadata}
+        onTimeUpdate={handleTimeUpdate}
+        onError={() => setStatusNote("Archivo no encontrado. Agrega la canción en public/music.")}
       />
 
       <button
@@ -105,12 +165,28 @@ export default function BackgroundMusicPlayer() {
               key={track.id}
               type="button"
               className={`${styles.musicTrackItem} ${track.id === currentTrackId ? styles.active : ""}`}
-              onClick={() => setCurrentTrackId(track.id)}
+              onClick={() => void handleTrackSelect(track)}
             >
               {track.label}
             </button>
           ))}
         </div>
+
+        <label className={styles.musicVolumeLabel}>
+          Progreso
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            step={0.1}
+            value={Math.min(currentTime, duration || 0)}
+            onChange={handleSeek}
+            disabled={!duration}
+          />
+          <span className={styles.musicTimeStamp}>
+            {formatTime(currentTime)} / {formatTime(duration)}
+          </span>
+        </label>
 
         <label className={styles.musicVolumeLabel}>
           Volumen
@@ -124,7 +200,7 @@ export default function BackgroundMusicPlayer() {
           />
         </label>
 
-        <p className={styles.musicStatus}>{status}</p>
+        <p className={styles.musicStatus}>{displayedStatus}</p>
       </div>
     </div>
   );
