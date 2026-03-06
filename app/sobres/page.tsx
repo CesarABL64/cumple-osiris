@@ -579,11 +579,13 @@ export default function SobresPage() {
             >
               <article
                 className="letter-sheet envelopes-letter-sheet letter-modal-sheet"
-                style={{
-                  backgroundColor: openedLetterColor.paper,
-                  color: openedLetterColor.ink,
-                  "--letter-paper-border": openedLetterColor.border,
-                }}
+                style={
+                  {
+                    backgroundColor: openedLetterColor.paper,
+                    color: openedLetterColor.ink,
+                    "--letter-paper-border": openedLetterColor.border,
+                  } as CSSProperties
+                }
                 onClick={(event) => event.stopPropagation()}
               >
                 <button
