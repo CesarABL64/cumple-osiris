@@ -7,6 +7,9 @@ import {
   type Letter,
 } from "@/app/lib/letters-shared";
 import { getDatabaseUrl } from "@/app/lib/db-url";
+import { LetterRequestError, parseLetterRequest } from "@/app/lib/letters-request";
+
+export const runtime = "nodejs";
 
 function buildErrorPayload(message: string, error: unknown) {
   if (process.env.NODE_ENV !== "development") {
@@ -148,9 +151,9 @@ export async function POST(request: Request) {
     await ensureLettersTable();
     await seedDefaultLettersOnce();
 
-    const body = (await request.json()) as Partial<Letter>;
-    const title = body.title?.trim() ?? "";
-    const author = body.author?.trim() ?? "";
+    const body = await parseLetterRequest(request);
+    const title = body.title;
+    const author = body.author;
 
     if (!title || !author) {
       return NextResponse.json(
@@ -162,11 +165,11 @@ export async function POST(request: Request) {
     const letter: Letter = {
       id: createLetterId(title),
       title,
-      description: body.description?.trim() ?? "",
+      description: body.description,
       author,
-      heading: body.heading?.trim() || title,
-      paragraphOne: body.paragraphOne?.trim() ?? "",
-      paragraphTwo: body.paragraphTwo?.trim() ?? "",
+      heading: body.heading || title,
+      paragraphOne: body.paragraphOne,
+      paragraphTwo: body.paragraphTwo,
       color: normalizeLetterColor(body.color),
       attachmentPdf: body.attachmentPdf ?? "",
     };
@@ -190,6 +193,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ letter }, { status: 201 });
   } catch (error) {
+    if (error instanceof LetterRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
     console.error(error);
     return NextResponse.json(buildErrorPayload("No se pudo crear la carta.", error), {
       status: 500,

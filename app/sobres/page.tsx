@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { type CSSProperties } from "react";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { defaultLetterColor, normalizeLetterColor, type Letter } from "@/app/lib/letters-shared";
+import { maxAttachmentBytes } from "@/app/lib/letters-attachment-config";
 
 const confettiPattern = Array.from({ length: 34 }, (_, index) => {
   const seedA = (index * 37 + 13) % 100;
@@ -256,6 +257,7 @@ export default function SobresPage() {
   const [isManaging, setIsManaging] = useState(false);
   const [editingLetterId, setEditingLetterId] = useState<string | null>(null);
   const [draft, setDraft] = useState(emptyDraft);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState("");
   const editorRef = useRef<HTMLDivElement | null>(null);
@@ -423,6 +425,7 @@ export default function SobresPage() {
 
   const resetDraft = () => {
     setDraft(emptyDraft);
+    setAttachmentFile(null);
     setEditingLetterId(null);
   };
 
@@ -447,8 +450,9 @@ export default function SobresPage() {
     }));
   };
 
-  const handleAttachmentPdfChange = async (file: File | null) => {
+  const handleAttachmentPdfChange = (file: File | null) => {
     if (!file) {
+      setAttachmentFile(null);
       setDraft((currentDraft) => ({ ...currentDraft, attachmentPdf: "" }));
       return;
     }
@@ -457,25 +461,20 @@ export default function SobresPage() {
     const isPdfName = file.name.toLowerCase().endsWith(".pdf");
 
     if (!isPdfMime && !isPdfName) {
+      setAttachmentFile(null);
       setDbError("Solo se permiten archivos PDF.");
       return;
     }
 
-    const reader = new FileReader();
+    if (file.size > maxAttachmentBytes) {
+      setAttachmentFile(null);
+      setDbError("El PDF es demasiado grande. El tamaño máximo permitido es 4 MB.");
+      return;
+    }
 
-    await new Promise<void>((resolve, reject) => {
-      reader.onload = () => {
-        const result = typeof reader.result === "string" ? reader.result : "";
-
-        setDraft((currentDraft) => ({ ...currentDraft, attachmentPdf: result }));
-        resolve();
-      };
-
-      reader.onerror = () => reject(new Error("No se pudo leer el archivo PDF."));
-      reader.readAsDataURL(file);
-    }).catch(() => {
-      setDbError("No se pudo procesar el PDF adjunto.");
-    });
+    setDbError("");
+    setAttachmentFile(file);
+    setDraft((currentDraft) => ({ ...currentDraft, attachmentPdf: "" }));
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -485,28 +484,31 @@ export default function SobresPage() {
       return;
     }
 
-    const payload = {
-      title: draft.title.trim(),
-      description: draft.description.trim(),
-      author: draft.author.trim(),
-      heading: draft.heading.trim() || draft.title.trim(),
-      paragraphOne: sanitizeRichText(draft.paragraphOne),
-      paragraphTwo: "",
-      color: normalizeLetterColor(draft.color),
-      attachmentPdf: draft.attachmentPdf,
-    };
+    const payload = new FormData();
+    payload.set("title", draft.title.trim());
+    payload.set("description", draft.description.trim());
+    payload.set("author", draft.author.trim());
+    payload.set("heading", draft.heading.trim() || draft.title.trim());
+    payload.set("paragraphOne", sanitizeRichText(draft.paragraphOne));
+    payload.set("paragraphTwo", "");
+    payload.set("color", normalizeLetterColor(draft.color));
+    payload.set("attachmentPdf", draft.attachmentPdf);
+
+    if (attachmentFile) {
+      payload.set("attachmentPdfFile", attachmentFile);
+    }
 
     setDbError("");
 
     if (editingLetterId) {
       const response = await fetch(`/api/letters/${editingLetterId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: payload,
       });
 
       if (!response.ok) {
-        setDbError("No se pudo actualizar la carta.");
+        const errorData = (await response.json().catch(() => null)) as { error?: string } | null;
+        setDbError(errorData?.error ?? "No se pudo actualizar la carta.");
         return;
       }
 
@@ -517,12 +519,12 @@ export default function SobresPage() {
 
     const response = await fetch("/api/letters", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: payload,
     });
 
     if (!response.ok) {
-      setDbError("No se pudo agregar la carta.");
+      const errorData = (await response.json().catch(() => null)) as { error?: string } | null;
+      setDbError(errorData?.error ?? "No se pudo agregar la carta.");
       return;
     }
 
@@ -533,6 +535,7 @@ export default function SobresPage() {
 
   const handleEdit = (letter: Letter) => {
     setEditingLetterId(letter.id);
+    setAttachmentFile(null);
     setDraft({
       title: letter.title,
       description: letter.description,
@@ -881,6 +884,10 @@ export default function SobresPage() {
                   />
                 </label>
 
+                {attachmentFile && (
+                  <p className="manager-item-subtitle">Archivo listo para subir: {attachmentFile.name}</p>
+                )}
+
                 {draft.attachmentPdf && (
                   <button
                     type="button"
@@ -893,6 +900,19 @@ export default function SobresPage() {
                     }
                   >
                     Quitar PDF adjunto
+                  </button>
+                )}
+
+                {attachmentFile && (
+                  <button
+                    type="button"
+                    className="manager-secondary-button"
+                    onClick={() => {
+                      setAttachmentFile(null);
+                      setDraft((currentDraft) => ({ ...currentDraft, attachmentPdf: "" }));
+                    }}
+                  >
+                    Quitar PDF seleccionado
                   </button>
                 )}
 

@@ -2,6 +2,9 @@ import { neon } from "@neondatabase/serverless";
 import { NextResponse } from "next/server";
 import { normalizeLetterColor, type Letter } from "@/app/lib/letters-shared";
 import { getDatabaseUrl } from "@/app/lib/db-url";
+import { LetterRequestError, parseLetterRequest } from "@/app/lib/letters-request";
+
+export const runtime = "nodejs";
 
 function getSqlClient() {
   return neon(getDatabaseUrl());
@@ -13,10 +16,10 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params;
-    const body = (await request.json()) as Partial<Letter>;
+    const body = await parseLetterRequest(request);
 
-    const title = body.title?.trim() ?? "";
-    const author = body.author?.trim() ?? "";
+    const title = body.title;
+    const author = body.author;
 
     if (!title || !author) {
       return NextResponse.json(
@@ -28,11 +31,11 @@ export async function PATCH(
     const updated: Letter = {
       id,
       title,
-      description: body.description?.trim() ?? "",
+      description: body.description,
       author,
-      heading: body.heading?.trim() || title,
-      paragraphOne: body.paragraphOne?.trim() ?? "",
-      paragraphTwo: body.paragraphTwo?.trim() ?? "",
+      heading: body.heading || title,
+      paragraphOne: body.paragraphOne,
+      paragraphTwo: body.paragraphTwo,
       color: normalizeLetterColor(body.color),
       attachmentPdf: body.attachmentPdf ?? "",
     };
@@ -56,6 +59,10 @@ export async function PATCH(
 
     return NextResponse.json({ letter: updated });
   } catch (error) {
+    if (error instanceof LetterRequestError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
     console.error(error);
     return NextResponse.json({ error: "No se pudo actualizar la carta." }, { status: 500 });
   }
