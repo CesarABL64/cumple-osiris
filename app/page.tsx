@@ -6,7 +6,7 @@ import { useMemo, useState, type CSSProperties } from "react";
 const stages = [
   {
     title: "¡Hola, Osiris!",
-    description: "Hoy quiero hacer que tu día sea especial :).",
+    description: "Hoy queremos hacer que tu día sea especial :).",
     accent: "#22d3ee",
     background: "radial-gradient(circle at top right, #151429, #090915 56%, #05050b)",
   },
@@ -17,14 +17,14 @@ const stages = [
     background: "radial-gradient(circle at top right, #211739, #130a21 56%, #09050f)",
   },
   {
-    title: "Esta historia va por etapas",
-    description: "Como un Spotify Wrapped, pero con cariño para tu cumple.",
+    title: "Este es un pequeño recopilatorio especial para tu cumpleaños",
+    description: "Como un Spotify Wrapped, pero escrito con el cariño de todos.",
     accent: "#f43f5e",
     background: "radial-gradient(circle at top right, #35203a, #211126 56%, #120915)",
   },
   {
     title: "Prepárate para abrir tus cartas",
-    description: "Entra y elige la carta para el momento perfecto.",
+    description: "Entre todos, hemos preparado algo especial para ti 👀.",
     accent: "#f59e0b",
     background: "radial-gradient(circle at top right, #4b2a2b, #2c1418 56%, #190d10)",
   },

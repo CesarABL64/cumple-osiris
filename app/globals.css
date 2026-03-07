@@ -768,12 +768,45 @@ body {
   gap: 0.65rem;
 }
 
+.letter-pdf-hint {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: color-mix(in oklab, currentColor 85%, #000 15%);
+}
+
 .letter-pdf-frame {
   width: 100%;
   height: min(68vh, 720px);
   border: 2px solid color-mix(in oklab, var(--letter-paper-border, #d8c8ad) 72%, #fff);
   border-radius: 10px;
   background: #ffffff;
+}
+
+.letter-pdf-mobile-actions {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.letter-pdf-action {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 10px;
+  border: 1px solid color-mix(in oklab, var(--letter-paper-border, #d8c8ad) 72%, #fff);
+  background: color-mix(in oklab, var(--letter-paper-border, #d8c8ad) 38%, white 62%);
+  color: #2a2218;
+  font-weight: 700;
+  padding: 0.58rem 0.75rem;
+}
+
+.letter-pdf-action.secondary {
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.desktop-fallback-actions {
+  justify-items: end;
 }
 
 .letter-rich-body p,

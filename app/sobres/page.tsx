@@ -251,6 +251,8 @@ export default function SobresPage() {
   const [letters, setLetters] = useState<Letter[]>([]);
   const [openedLetterId, setOpenedLetterId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isMobilePdfView, setIsMobilePdfView] = useState(false);
+  const [openedAttachmentUrl, setOpenedAttachmentUrl] = useState("");
   const [isManaging, setIsManaging] = useState(false);
   const [editingLetterId, setEditingLetterId] = useState<string | null>(null);
   const [draft, setDraft] = useState(emptyDraft);
@@ -280,6 +282,8 @@ export default function SobresPage() {
     const mergedBody = [openedLetter.paragraphOne, openedLetter.paragraphTwo].filter(Boolean).join("\n\n");
     return sanitizeRichText(toRichHtml(mergedBody));
   }, [openedLetter]);
+
+  const openedLetterPdfSource = openedAttachmentUrl || openedLetter?.attachmentPdf || "";
 
   const loadLetters = async (preferredSelectedId?: string) => {
     setIsLoading(true);
@@ -330,6 +334,20 @@ export default function SobresPage() {
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 900px)");
+    const updateView = () => setIsMobilePdfView(mediaQuery.matches);
+
+    updateView();
+    mediaQuery.addEventListener("change", updateView);
+
+    return () => mediaQuery.removeEventListener("change", updateView);
+  }, []);
+
+  useEffect(() => {
     if (!openedLetter) {
       return;
     }
@@ -348,6 +366,50 @@ export default function SobresPage() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [openedLetter]);
+
+  useEffect(() => {
+    if (!openedLetter?.attachmentPdf) {
+      setOpenedAttachmentUrl("");
+      return;
+    }
+
+    const source = openedLetter.attachmentPdf;
+
+    if (!source.startsWith("data:application/pdf")) {
+      setOpenedAttachmentUrl(source);
+      return;
+    }
+
+    let revokeUrl = "";
+    let cancelled = false;
+
+    void fetch(source)
+      .then((response) => response.blob())
+      .then((blob) => {
+        if (cancelled) {
+          return;
+        }
+
+        revokeUrl = URL.createObjectURL(blob);
+        setOpenedAttachmentUrl(revokeUrl);
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+
+        // Fallback to data URL if blob URL creation fails on this browser.
+        setOpenedAttachmentUrl(source);
+      });
+
+    return () => {
+      cancelled = true;
+
+      if (revokeUrl) {
+        URL.revokeObjectURL(revokeUrl);
+      }
+    };
+  }, [openedLetter?.attachmentPdf]);
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -632,11 +694,47 @@ export default function SobresPage() {
                 {openedLetter.attachmentPdf ? (
                   <div className="letter-pdf-wrap">
                     <h2>{openedLetter.heading}</h2>
-                    <iframe
-                      className="letter-pdf-frame"
-                      src={openedLetter.attachmentPdf}
-                      title={`PDF de ${openedLetter.title}`}
-                    />
+
+                    {isMobilePdfView ? (
+                      <div className="letter-pdf-mobile-actions">
+                        <p className="letter-pdf-hint">
+                          En algunos telefonos el visor embebido no funciona. Usa una de estas opciones.
+                        </p>
+                        <a
+                          className="letter-pdf-action"
+                          href={openedLetterPdfSource}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Abrir PDF
+                        </a>
+                        <a
+                          className="letter-pdf-action secondary"
+                          href={openedLetterPdfSource}
+                          download={`${openedLetter.title}.pdf`}
+                        >
+                          Descargar PDF
+                        </a>
+                      </div>
+                    ) : (
+                      <>
+                        <iframe
+                          className="letter-pdf-frame"
+                          src={openedLetterPdfSource}
+                          title={`PDF de ${openedLetter.title}`}
+                        />
+                        <div className="letter-pdf-mobile-actions desktop-fallback-actions">
+                          <a
+                            className="letter-pdf-action secondary"
+                            href={openedLetterPdfSource}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Abrir en nueva pestana
+                          </a>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <>
