@@ -37,6 +37,7 @@ async function ensureLettersTable() {
       paragraph_one TEXT NOT NULL DEFAULT '',
       paragraph_two TEXT NOT NULL DEFAULT '',
       color TEXT NOT NULL DEFAULT 'cream',
+      attachment_pdf TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -45,6 +46,11 @@ async function ensureLettersTable() {
   await sql`
     ALTER TABLE letters
     ADD COLUMN IF NOT EXISTS color TEXT NOT NULL DEFAULT 'cream';
+  `;
+
+  await sql`
+    ALTER TABLE letters
+    ADD COLUMN IF NOT EXISTS attachment_pdf TEXT NOT NULL DEFAULT '';
   `;
 
   await sql`
@@ -76,7 +82,7 @@ async function seedDefaultLettersOnce() {
   if (count === 0) {
     for (const letter of defaultLetters) {
       await sql`
-        INSERT INTO letters (id, title, description, author, heading, paragraph_one, paragraph_two, color)
+        INSERT INTO letters (id, title, description, author, heading, paragraph_one, paragraph_two, color, attachment_pdf)
         VALUES (
           ${letter.id},
           ${letter.title},
@@ -85,7 +91,8 @@ async function seedDefaultLettersOnce() {
           ${letter.heading},
           ${letter.paragraphOne},
           ${letter.paragraphTwo},
-          ${normalizeLetterColor(letter.color)}
+          ${normalizeLetterColor(letter.color)},
+          ${letter.attachmentPdf ?? ""}
         )
         ON CONFLICT (id) DO NOTHING;
       `;
@@ -112,7 +119,8 @@ async function listLetters(): Promise<Letter[]> {
       heading,
       paragraph_one AS "paragraphOne",
       paragraph_two AS "paragraphTwo",
-      color
+      color,
+      attachment_pdf AS "attachmentPdf"
     FROM letters
     ORDER BY created_at ASC;
   `;
@@ -160,12 +168,13 @@ export async function POST(request: Request) {
       paragraphOne: body.paragraphOne?.trim() ?? "",
       paragraphTwo: body.paragraphTwo?.trim() ?? "",
       color: normalizeLetterColor(body.color),
+      attachmentPdf: body.attachmentPdf ?? "",
     };
 
     const sql = getSqlClient();
 
     await sql`
-      INSERT INTO letters (id, title, description, author, heading, paragraph_one, paragraph_two, color)
+      INSERT INTO letters (id, title, description, author, heading, paragraph_one, paragraph_two, color, attachment_pdf)
       VALUES (
         ${letter.id},
         ${letter.title},
@@ -174,7 +183,8 @@ export async function POST(request: Request) {
         ${letter.heading},
         ${letter.paragraphOne},
         ${letter.paragraphTwo},
-        ${letter.color}
+        ${letter.color},
+        ${letter.attachmentPdf ?? ""}
       );
     `;
 

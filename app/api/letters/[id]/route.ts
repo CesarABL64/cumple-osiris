@@ -34,6 +34,7 @@ export async function PATCH(
       paragraphOne: body.paragraphOne?.trim() ?? "",
       paragraphTwo: body.paragraphTwo?.trim() ?? "",
       color: normalizeLetterColor(body.color),
+      attachmentPdf: body.attachmentPdf ?? "",
     };
 
     const sql = getSqlClient();
@@ -48,6 +49,7 @@ export async function PATCH(
         paragraph_one = ${updated.paragraphOne},
         paragraph_two = ${updated.paragraphTwo},
         color = ${updated.color},
+        attachment_pdf = ${updated.attachmentPdf ?? ""},
         updated_at = NOW()
       WHERE id = ${id};
     `;

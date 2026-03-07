@@ -7,6 +7,7 @@ export type Letter = {
   paragraphOne: string;
   paragraphTwo: string;
   color: string;
+  attachmentPdf?: string;
 };
 
 export const letterColorKeys = [
@@ -44,6 +45,7 @@ export const defaultLetters: Letter[] = [
     paragraphTwo:
       "Feliz cumpleaños, Osiris. Que esta noche tenga la energía de una gran historia y que cada detalle te recuerde lo importante que eres.",
     color: "peach",
+    attachmentPdf: "",
   },
   {
     id: "carta-solo",
@@ -56,6 +58,7 @@ export const defaultLetters: Letter[] = [
     paragraphTwo:
       "Feliz cumpleaños, Osiris. Ojalá que este nuevo año te regale paz, claridad y muchas razones para sonreír incluso en silencio.",
     color: "lavender",
+    attachmentPdf: "",
   },
 ];
 

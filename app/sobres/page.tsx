@@ -27,6 +27,7 @@ const emptyDraft = {
   paragraphOne: "",
   paragraphTwo: "",
   color: defaultLetterColor,
+  attachmentPdf: "",
 };
 
 const letterColorOptions = [
@@ -262,8 +263,6 @@ export default function SobresPage() {
     [letters, openedLetterId],
   );
 
-  const formTitle = editingLetterId ? "Editar carta" : "Agregar carta";
-
   const getLetterColorOption = (color?: string) => {
     const key = normalizeLetterColor(color);
     return letterColorOptions.find((option) => option.key === key) ?? letterColorOptions[0];
@@ -297,6 +296,7 @@ export default function SobresPage() {
       const nextLetters = data.letters.map((letter) => ({
         ...letter,
         color: normalizeLetterColor(letter.color),
+        attachmentPdf: letter.attachmentPdf ?? "",
       }));
 
       setLetters(nextLetters);
@@ -359,6 +359,11 @@ export default function SobresPage() {
     }
   }, [draft.paragraphOne, editingLetterId]);
 
+  const resetDraft = () => {
+    setDraft(emptyDraft);
+    setEditingLetterId(null);
+  };
+
   const runEditorCommand = (command: "bold" | "italic" | "underline") => {
     if (!editorRef.current) {
       return;
@@ -380,9 +385,35 @@ export default function SobresPage() {
     }));
   };
 
-  const resetDraft = () => {
-    setDraft(emptyDraft);
-    setEditingLetterId(null);
+  const handleAttachmentPdfChange = async (file: File | null) => {
+    if (!file) {
+      setDraft((currentDraft) => ({ ...currentDraft, attachmentPdf: "" }));
+      return;
+    }
+
+    const isPdfMime = file.type === "application/pdf";
+    const isPdfName = file.name.toLowerCase().endsWith(".pdf");
+
+    if (!isPdfMime && !isPdfName) {
+      setDbError("Solo se permiten archivos PDF.");
+      return;
+    }
+
+    const reader = new FileReader();
+
+    await new Promise<void>((resolve, reject) => {
+      reader.onload = () => {
+        const result = typeof reader.result === "string" ? reader.result : "";
+
+        setDraft((currentDraft) => ({ ...currentDraft, attachmentPdf: result }));
+        resolve();
+      };
+
+      reader.onerror = () => reject(new Error("No se pudo leer el archivo PDF."));
+      reader.readAsDataURL(file);
+    }).catch(() => {
+      setDbError("No se pudo procesar el PDF adjunto.");
+    });
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -400,6 +431,7 @@ export default function SobresPage() {
       paragraphOne: sanitizeRichText(draft.paragraphOne),
       paragraphTwo: "",
       color: normalizeLetterColor(draft.color),
+      attachmentPdf: draft.attachmentPdf,
     };
 
     setDbError("");
@@ -447,6 +479,7 @@ export default function SobresPage() {
       paragraphOne: letter.paragraphOne,
       paragraphTwo: "",
       color: normalizeLetterColor(letter.color),
+      attachmentPdf: letter.attachmentPdf ?? "",
     });
   };
 
@@ -596,12 +629,25 @@ export default function SobresPage() {
                 >
                   X
                 </button>
-                <h2>{openedLetter.heading}</h2>
-                <div
-                  className="letter-rich-body"
-                  dangerouslySetInnerHTML={{ __html: openedLetterHtml }}
-                />
-                <p className="letter-author-sign">Atte. {openedLetter.author}</p>
+                {openedLetter.attachmentPdf ? (
+                  <div className="letter-pdf-wrap">
+                    <h2>{openedLetter.heading}</h2>
+                    <iframe
+                      className="letter-pdf-frame"
+                      src={openedLetter.attachmentPdf}
+                      title={`PDF de ${openedLetter.title}`}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <h2>{openedLetter.heading}</h2>
+                    <div
+                      className="letter-rich-body"
+                      dangerouslySetInnerHTML={{ __html: openedLetterHtml }}
+                    />
+                    <p className="letter-author-sign">Atte. {openedLetter.author}</p>
+                  </>
+                )}
               </article>
             </div>,
             document.body,
@@ -622,6 +668,9 @@ export default function SobresPage() {
                   <article key={`manage-${letter.id}`} className="manager-item">
                     <p className="manager-item-title">{letter.title}</p>
                     <p className="manager-item-subtitle">Autor: {letter.author}</p>
+                    {letter.attachmentPdf && (
+                      <p className="manager-item-subtitle">Tiene PDF adjunto</p>
+                    )}
                     <div className="manager-item-actions">
                       <button
                         type="button"
@@ -643,7 +692,7 @@ export default function SobresPage() {
               </div>
 
               <form className="letters-manager-form" onSubmit={(event) => void handleSubmit(event)}>
-                <h3>{formTitle}</h3>
+                <h3>{editingLetterId ? "Editar carta" : "Agregar carta"}</h3>
 
                 <label>
                   Título
@@ -725,6 +774,30 @@ export default function SobresPage() {
                   />
                 </label>
 
+                <label>
+                  Adjuntar carta (PDF)
+                  <input
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    onChange={(event) => void handleAttachmentPdfChange(event.target.files?.[0] ?? null)}
+                  />
+                </label>
+
+                {draft.attachmentPdf && (
+                  <button
+                    type="button"
+                    className="manager-secondary-button"
+                    onClick={() =>
+                      setDraft((currentDraft) => ({
+                        ...currentDraft,
+                        attachmentPdf: "",
+                      }))
+                    }
+                  >
+                    Quitar PDF adjunto
+                  </button>
+                )}
+
                 <fieldset className="letter-color-picker">
                   <legend>Color de la carta</legend>
                   <div className="letter-color-options">
@@ -764,6 +837,7 @@ export default function SobresPage() {
             </div>
           </section>
         )}
+
       </section>
     </main>
   );
