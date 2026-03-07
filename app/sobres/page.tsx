@@ -249,6 +249,7 @@ function sanitizeRichText(inputHtml: string) {
 }
 
 export default function SobresPage() {
+  const showLettersManager = false;
   const [letters, setLetters] = useState<Letter[]>([]);
   const [openedLetterId, setOpenedLetterId] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
@@ -581,14 +582,16 @@ export default function SobresPage() {
       <section className="envelopes-wrap">
         <div className="envelopes-heading-row">
           <h1 className="envelopes-title">¡Es hora de ver tus cartas, Osiris!</h1>
-          <button
-            type="button"
-            className={`envelope-manage-toggle ${isManaging ? "is-active" : ""}`}
-            onClick={() => setIsManaging((current) => !current)}
-            aria-expanded={isManaging}
-          >
-            Manejar cartas ✨
-          </button>
+          {showLettersManager && (
+            <button
+              type="button"
+              className={`envelope-manage-toggle ${isManaging ? "is-active" : ""}`}
+              onClick={() => setIsManaging((current) => !current)}
+              aria-expanded={isManaging}
+            >
+              Manejar cartas ✨
+            </button>
+          )}
         </div>
 
         {isLoading && <p className="envelope-db-message">Cargando cartas desde la base de datos...</p>}
@@ -754,7 +757,7 @@ export default function SobresPage() {
             document.body,
           )}
 
-        {isManaging && (
+        {showLettersManager && isManaging && (
           <section className="letters-manager" aria-label="Manejar cartas">
             <div className="letters-manager-top">
               <h2>Manejar cartas</h2>
